@@ -109,7 +109,7 @@ int gdev_drv_chan_alloc(struct drm_device *drm, struct gdev_drv_vspace *drv_vspa
 	case 0xc0:
 	case 0xe0:
 	    /* FIFO command queue registers. */
-	    regs = chan->user;
+	    regs = chan->user.map.ptr;
 	    break;
 	default:
 	    ret = -EINVAL;
@@ -149,8 +149,8 @@ int gdev_drv_subch_alloc(struct drm_device *drm, void *chan, u32 handle, u16 ocl
 {
     struct nouveau_drm *nvdrm = nouveau_drm(drm);
 
-    return nouveau_object_new(nv_object(nvdrm),
-	    NVDRM_CHAN | ((struct nouveau_channel *)chan)->handle,
+    return nouveau_object_new(nvxx_object(nvdrm),
+	    NVDRM_CHAN | ((struct nouveau_channel *)chan)->chid,
 	    handle, oclass, NULL, 0,
 	    (struct nouveau_object **)ctx_obj);
 }
@@ -160,8 +160,8 @@ int gdev_drv_subch_free(struct drm_device *drm, void *chan, u32 handle)
 {
     struct nouveau_drm *nvdrm = nouveau_drm(drm);
 
-    return nouveau_object_del(nv_object(nvdrm),
-	    ((struct nouveau_channel *)chan)->handle, handle);
+    return nouveau_object_del(nvxx_object(nvdrm),
+	    ((struct nouveau_channel *)chan)->chid, handle);
 }
 EXPORT_SYMBOL(gdev_drv_subch_free);
 
@@ -179,7 +179,7 @@ int gdev_drv_bo_alloc(struct drm_device *drm, uint64_t size, uint32_t drv_flags,
     if (chan)
         client = (void *)chan->user.client;
     else /* swap space doesn't have a parent channel, for instance... */
-	client = nv_client(&nvdrm->client);
+        client = &nvdrm->client;
 
     /* set memory type. */
     if (drv_flags & GDEV_DRV_BO_VRAM) {
@@ -189,7 +189,7 @@ int gdev_drv_bo_alloc(struct drm_device *drm, uint64_t size, uint32_t drv_flags,
 	flags |= TTM_PL_FLAG_TT;
     }
 
-    ret = nouveau_bo_new(drm, size, 0, flags, 0, 0, NULL, &bo);
+    ret = nouveau_bo_new(drm, size, 0, flags, 0, 0, NULL, NULL, &bo);
     if (ret)
 	goto fail_bo_new;
 
@@ -258,8 +258,8 @@ int gdev_drv_bo_free(struct gdev_drv_vspace *drv_vspace, struct gdev_drv_bo *drv
     if (chan)
         client = (void *)chan->user.client;
     else { /* swap space doesn't have a parent channel, for instance... */
-	nvdrm = nouveau_drm(drm);
-	client = nv_client(&nvdrm->client);
+        nvdrm = nouveau_drm(drm);
+        client = &nvdrm->client;
     }
 
     if (map && bo->kmap.bo) /* dirty validation.. */
