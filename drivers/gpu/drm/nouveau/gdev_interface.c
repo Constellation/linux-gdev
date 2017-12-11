@@ -203,7 +203,7 @@ int gdev_drv_bo_alloc(struct drm_device *drm, uint64_t size, uint32_t drv_flags,
 
     /* allocate virtual address space, if requested. */
     if (drv_flags & GDEV_DRV_BO_VSPACE) {
-	if (nvdev->card_type >= NV_50) {
+	if (nvxx_device(nvdev)->card_type >= NV_50) {
 	    vma = kzalloc(sizeof(*vma), GFP_KERNEL);
 	    if (!vma) {
 		ret = -ENOMEM;
@@ -293,7 +293,7 @@ int gdev_drv_bo_bind(struct drm_device *drm, struct gdev_drv_vspace *drv_vspace,
     int ret;
 
     /* allocate virtual address space, if requested. */
-    if (nvdev->card_type >= NV_50) {
+    if (nvxx_device(nvdev)->card_type >= NV_50) {
 	vma = kzalloc(sizeof(*vma), GFP_KERNEL);
 	if (!vma) {
 	    ret = -ENOMEM;
@@ -439,20 +439,15 @@ int gdev_drv_getparam(struct drm_device *drm, uint32_t type, uint64_t *res)
     struct drm_nouveau_getparam getparam;
     struct nouveau_drm *nvdrm = nouveau_drm(drm);
     struct nvif_device* nvdev = &nvdrm->device;
-    struct nouveau_graph *nvgraph = nouveau_graph(nvdrm->device);
+	struct nvkm_gr *gr = nvxx_gr(nvdev);
     int ret = 0;
 
     switch (type) {
-	case GDEV_DRV_GETPARAM_MP_COUNT:
-	    if ((nvdev->info.chipset & 0xf0) == 0xc0) {
-		struct nvc0_graph_priv *priv = (void *) nvgraph;
-		*res = priv->tpc_total;
-	    }
-	    else {
-		*res = 0;
-		ret = -EINVAL;
-	    }
+	case GDEV_DRV_GETPARAM_MP_COUNT: {
+		uint64_t value = nvkm_gr_units(gr);
+        *res = (value & 0xffffff00) >> 8;
 	    break;
+    }
 	case GDEV_DRV_GETPARAM_FB_SIZE:
 	    getparam.param = NOUVEAU_GETPARAM_FB_SIZE;
 	    ret = nouveau_abi16_ioctl_getparam(drm, &getparam, NULL);
