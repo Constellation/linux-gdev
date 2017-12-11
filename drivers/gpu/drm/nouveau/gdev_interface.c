@@ -149,7 +149,7 @@ int gdev_drv_subch_alloc(struct drm_device *drm, void *chan, u32 handle, u16 ocl
 {
     struct nouveau_drm *nvdrm = nouveau_drm(drm);
 
-    return nouveau_object_new(nvxx_object(nvdrm),
+    return nouveau_object_new(nv_object(nvdrm),
 	    NVDRM_CHAN | ((struct nouveau_channel *)chan)->chid,
 	    handle, oclass, NULL, 0,
 	    (struct nouveau_object **)ctx_obj);
@@ -160,7 +160,7 @@ int gdev_drv_subch_free(struct drm_device *drm, void *chan, u32 handle)
 {
     struct nouveau_drm *nvdrm = nouveau_drm(drm);
 
-    return nouveau_object_del(nvxx_object(nvdrm),
+    return nouveau_object_del(nv_object(nvdrm),
 	    ((struct nouveau_channel *)chan)->chid, handle);
 }
 EXPORT_SYMBOL(gdev_drv_subch_free);
@@ -172,7 +172,7 @@ int gdev_drv_bo_alloc(struct drm_device *drm, uint64_t size, uint32_t drv_flags,
     struct nouveau_channel *chan = (struct nouveau_channel *)drv_vspace->priv;
     struct nouveau_cli *client;
     struct nouveau_bo *bo;
-    struct nouveau_vma *vma;
+    struct nvkm_vma *vma;
     uint32_t flags = 0;
     int ret;
 
@@ -251,7 +251,7 @@ int gdev_drv_bo_free(struct gdev_drv_vspace *drv_vspace, struct gdev_drv_bo *drv
     struct nouveau_drm *nvdrm;
     struct nouveau_cli *client; // = nv_client(chan->client);
     struct nouveau_bo *bo = (struct nouveau_bo *)drv_bo->priv;
-    struct nouveau_vma *vma;
+    struct nvkm_vma *vma;
     uint64_t addr = drv_bo->addr;
     void *map = drv_bo->map;
 
@@ -289,7 +289,7 @@ int gdev_drv_bo_bind(struct drm_device *drm, struct gdev_drv_vspace *drv_vspace,
     struct nouveau_channel *chan = (struct nouveau_channel *)drv_vspace->priv;
     struct nouveau_cli *client = (void *)chan->user.client;
     struct nouveau_bo *bo = (struct nouveau_bo *)drv_bo->priv;
-    struct nouveau_vma *vma;
+    struct nvkm_vma *vma;
     int ret;
 
     /* allocate virtual address space, if requested. */
@@ -326,7 +326,7 @@ int gdev_drv_bo_unbind(struct gdev_drv_vspace *drv_vspace, struct gdev_drv_bo *d
     struct nouveau_channel *chan = (struct nouveau_channel *)drv_vspace->priv;
     struct nouveau_cli *client = (void *)chan->user.client;
     struct nouveau_bo *bo = (struct nouveau_bo *)drv_bo->priv;
-    struct nouveau_vma *vma;
+    struct nvkm_vma *vma;
 
     vma = nouveau_bo_vma_find(bo, client->vm);
     if (vma) {
