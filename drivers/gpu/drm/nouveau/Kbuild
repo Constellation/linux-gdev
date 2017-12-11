@@ -27,6 +27,9 @@ nouveau-$(CONFIG_NOUVEAU_PLATFORM_DRIVER) += nouveau_platform.o
 nouveau-y += nouveau_usif.o # userspace <-> nvif
 nouveau-y += nouveau_vga.o
 
+# gdev
+nouveau-y += gdev_interface.o
+
 # DRM - memory management
 nouveau-y += nouveau_bo.o
 nouveau-y += nouveau_gem.o
