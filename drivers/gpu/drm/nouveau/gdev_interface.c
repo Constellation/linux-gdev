@@ -147,21 +147,23 @@ EXPORT_SYMBOL(gdev_drv_chan_free);
 
 int gdev_drv_subch_alloc(struct drm_device *drm, void *chan, u32 handle, u16 oclass, void **ctx_obj)
 {
-    struct nouveau_drm *nvdrm = nouveau_drm(drm);
-
-    return nouveau_object_new(nv_object(nvdrm),
-	    NVDRM_CHAN | ((struct nouveau_channel *)chan)->chid,
-	    handle, oclass, NULL, 0,
-	    (struct nouveau_object **)ctx_obj);
+    struct drm_nouveau_grobj_alloc request = {
+        .channel = ((struct nouveau_channel*)chan)->chid,
+        .handle = handle,
+        .class = oclass,
+    };
+    *ctx_obj = NULL;
+    return nouveau_abi16_ioctl_grobj_alloc(drm, &request, NULL);
 }
 EXPORT_SYMBOL(gdev_drv_subch_alloc);
 
 int gdev_drv_subch_free(struct drm_device *drm, void *chan, u32 handle)
 {
-    struct nouveau_drm *nvdrm = nouveau_drm(drm);
-
-    return nouveau_object_del(nv_object(nvdrm),
-	    ((struct nouveau_channel *)chan)->chid, handle);
+    struct drm_nouveau_gpuobj_free request = {
+        .channel = ((struct nouveau_channel *)chan)->chid,
+        .handle = handle,
+    };
+    return nouveau_abi16_ioctl_gpuobj_free(drm, &request, NULL);
 }
 EXPORT_SYMBOL(gdev_drv_subch_free);
 
