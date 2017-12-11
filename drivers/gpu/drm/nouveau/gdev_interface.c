@@ -1,9 +1,11 @@
 #include <linux/module.h>
 #include <linux/version.h>
-#include <engine/graph.h>
-#include <core/device.h>
-#include <core/engine/graph/nvc0.h>
+/* #include <nvkm/core/engine/graph/nvc0.h> */
+#include <drm/ttm/ttm_placement.h>
 #include <drm/ttm/ttm_bo_api.h>
+#include <nvkm/engine/gr.h>
+#include <nvkm/core/device.h>
+#include "nouveau_drv.h"
 #include "nouveau_dma.h"
 #include "nouveau_bo.h"
 #include "nouveau_chan.h"
@@ -26,11 +28,9 @@ int gdev_drv_vspace_alloc(struct drm_device *drm, uint64_t size, struct gdev_drv
     arg0 = 0xbeef0201; /*NvDmaFB*/
     arg1 = 0xbeef0202; /*NvDmaTT*/
 
-    if (nouveau_channel_new(nvdrm, &nvdrm->client, NVDRM_DEVICE,
-		NVDRM_CHAN + 2, 
-		arg0, arg1, &chan)) {
-	printk("Failed to allocate nouveau channel\n");
-	return -ENOMEM;
+    if (nouveau_channel_new(nvdrm, &nvdrm->device, arg0, arg1, &chan)) {
+        printk("Failed to allocate nouveau channel\n");
+        return -ENOMEM;
     }
 
     drv_vspace->priv = (void *)chan;
@@ -52,9 +52,8 @@ EXPORT_SYMBOL(gdev_drv_vspace_free);
 int gdev_drv_chan_alloc(struct drm_device *drm, struct gdev_drv_vspace *drv_vspace, struct gdev_drv_chan *drv_chan)
 {
     struct nouveau_drm *nvdrm = nouveau_drm(drm);
-    struct nouveau_device *nvdev = nv_device(nvdrm->device);
+    struct nvif_device* nvdev = &nvdrm->device;
     struct nouveau_channel *chan = (struct nouveau_channel *)drv_vspace->priv;
-    struct nouveau_fifo_chan *fifo = (void *)chan->object;
     struct nouveau_bo *ib_bo, *pb_bo;
     uint32_t cid;
     volatile uint32_t *regs;
@@ -66,7 +65,7 @@ int gdev_drv_chan_alloc(struct drm_device *drm, struct gdev_drv_vspace *drv_vspa
     int ret;
 
     /* channel ID. */
-    cid = chan->handle;
+    cid = chan->chid;
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,7,0)
     /* FIFO push buffer setup. */
@@ -106,11 +105,11 @@ int gdev_drv_chan_alloc(struct drm_device *drm, struct gdev_drv_vspace *drv_vspa
 
     /* FIFO init: it has already been done in gdev_vas_new(). */
 
-    switch (nvdev->chipset & 0xf0) {
+    switch (nvdev->info.chipset & 0xf0) {
 	case 0xc0:
 	case 0xe0:
 	    /* FIFO command queue registers. */
-	    regs = fifo->user;
+	    regs = chan->user;
 	    break;
 	default:
 	    ret = -EINVAL;
@@ -169,16 +168,16 @@ EXPORT_SYMBOL(gdev_drv_subch_free);
 int gdev_drv_bo_alloc(struct drm_device *drm, uint64_t size, uint32_t drv_flags, struct gdev_drv_vspace *drv_vspace, struct gdev_drv_bo *drv_bo)
 {
     struct nouveau_drm *nvdrm = nouveau_drm(drm);
-    struct nouveau_device *nvdev = nv_device(nvdrm->device);
+    struct nvif_device* nvdev = &nvdrm->device;
     struct nouveau_channel *chan = (struct nouveau_channel *)drv_vspace->priv;
-    struct nouveau_client *client;
+    struct nouveau_cli *client;
     struct nouveau_bo *bo;
     struct nouveau_vma *vma;
     uint32_t flags = 0;
     int ret;
 
     if (chan)
-	client = nv_client(chan->cli);
+        client = (void *)chan->user.client;
     else /* swap space doesn't have a parent channel, for instance... */
 	client = nv_client(&nvdrm->client);
 
@@ -250,14 +249,14 @@ int gdev_drv_bo_free(struct gdev_drv_vspace *drv_vspace, struct gdev_drv_bo *drv
     struct nouveau_channel *chan = (struct nouveau_channel *)drv_vspace->priv;
     struct drm_device *drm = (struct drm_device *)drv_vspace->drm;
     struct nouveau_drm *nvdrm;
-    struct nouveau_client *client; // = nv_client(chan->cli);
+    struct nouveau_cli *client; // = nv_client(chan->client);
     struct nouveau_bo *bo = (struct nouveau_bo *)drv_bo->priv;
     struct nouveau_vma *vma;
     uint64_t addr = drv_bo->addr;
     void *map = drv_bo->map;
 
     if (chan)
-	client = nv_client(chan->cli);
+        client = (void *)chan->user.client;
     else { /* swap space doesn't have a parent channel, for instance... */
 	nvdrm = nouveau_drm(drm);
 	client = nv_client(&nvdrm->client);
@@ -286,9 +285,9 @@ EXPORT_SYMBOL(gdev_drv_bo_free);
 int gdev_drv_bo_bind(struct drm_device *drm, struct gdev_drv_vspace *drv_vspace, struct gdev_drv_bo *drv_bo)
 {
     struct nouveau_drm *nvdrm = nouveau_drm(drm);
-    struct nouveau_device *nvdev = nv_device(nvdrm->device);
+    struct nvif_device* nvdev = &nvdrm->device;
     struct nouveau_channel *chan = (struct nouveau_channel *)drv_vspace->priv;
-    struct nouveau_client *client = nv_client(chan->cli);
+    struct nouveau_cli *client = (void *)chan->user.client;
     struct nouveau_bo *bo = (struct nouveau_bo *)drv_bo->priv;
     struct nouveau_vma *vma;
     int ret;
@@ -325,7 +324,7 @@ EXPORT_SYMBOL(gdev_drv_bo_bind);
 int gdev_drv_bo_unbind(struct gdev_drv_vspace *drv_vspace, struct gdev_drv_bo *drv_bo)
 {
     struct nouveau_channel *chan = (struct nouveau_channel *)drv_vspace->priv;
-    struct nouveau_client *client = nv_client(chan->cli);
+    struct nouveau_cli *client = (void *)chan->user.client;
     struct nouveau_bo *bo = (struct nouveau_bo *)drv_bo->priv;
     struct nouveau_vma *vma;
 
@@ -439,13 +438,13 @@ int gdev_drv_getparam(struct drm_device *drm, uint32_t type, uint64_t *res)
 {
     struct drm_nouveau_getparam getparam;
     struct nouveau_drm *nvdrm = nouveau_drm(drm);
-    struct nouveau_device *nvdev = nv_device(nvdrm->device);
+    struct nvif_device* nvdev = &nvdrm->device;
     struct nouveau_graph *nvgraph = nouveau_graph(nvdrm->device);
     int ret = 0;
 
     switch (type) {
 	case GDEV_DRV_GETPARAM_MP_COUNT:
-	    if ((nvdev->chipset & 0xf0) == 0xc0) {
+	    if ((nvdev->info.chipset & 0xf0) == 0xc0) {
 		struct nvc0_graph_priv *priv = (void *) nvgraph;
 		*res = priv->tpc_total;
 	    }
