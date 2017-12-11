@@ -439,15 +439,14 @@ int gdev_drv_getparam(struct drm_device *drm, uint32_t type, uint64_t *res)
     struct drm_nouveau_getparam getparam;
     struct nouveau_drm *nvdrm = nouveau_drm(drm);
     struct nvif_device* nvdev = &nvdrm->device;
-	struct nvkm_gr *gr = nvxx_gr(nvdev);
     int ret = 0;
 
     switch (type) {
-	case GDEV_DRV_GETPARAM_MP_COUNT: {
-		uint64_t value = nvkm_gr_units(gr);
-        *res = (value & 0xffffff00) >> 8;
+	case GDEV_DRV_GETPARAM_MP_COUNT:
+	    getparam.param = NOUVEAU_GETPARAM_GRAPH_UNITS;
+	    ret = nouveau_abi16_ioctl_getparam(drm, &getparam, NULL);
+        *res = (getparam.value & 0xffffff00) >> 8;
 	    break;
-    }
 	case GDEV_DRV_GETPARAM_FB_SIZE:
 	    getparam.param = NOUVEAU_GETPARAM_FB_SIZE;
 	    ret = nouveau_abi16_ioctl_getparam(drm, &getparam, NULL);
