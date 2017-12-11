@@ -437,8 +437,6 @@ EXPORT_SYMBOL(gdev_drv_getdrm);
 int gdev_drv_getparam(struct drm_device *drm, uint32_t type, uint64_t *res)
 {
     struct drm_nouveau_getparam getparam;
-    struct nouveau_drm *nvdrm = nouveau_drm(drm);
-    struct nvif_device* nvdev = &nvdrm->device;
     int ret = 0;
 
     switch (type) {
