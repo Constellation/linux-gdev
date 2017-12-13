@@ -17,7 +17,7 @@
 
 extern int nouveau_device_count;
 extern struct drm_device **nouveau_drm_device;
-extern void (*nouveau_callback_notify)(int subc, uint32_t data);
+void (*nouveau_callback_notify)(int subc, uint32_t data) = NULL;
 
 int gdev_drv_vspace_alloc(struct drm_device *drm, uint64_t size, struct gdev_drv_vspace *drv_vspace)
 {
