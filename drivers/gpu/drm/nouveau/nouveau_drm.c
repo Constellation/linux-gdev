@@ -86,6 +86,7 @@ static struct drm_driver driver_platform;
 
 int nouveau_device_count = 0; /* Gdev */
 struct drm_device **nouveau_drm_device = NULL; /* Gdev  */
+static int __get_device_index(struct drm_device *dev); /* Gdev */
 
 static u64
 nouveau_pci_name(struct pci_dev *pdev)
@@ -408,6 +409,7 @@ nouveau_drm_load(struct drm_device *dev, unsigned long flags)
 {
 	struct nouveau_drm *drm;
 	int ret;
+	int index;
 
 	ret = nouveau_cli_create(dev, "DRM", sizeof(*drm), (void **)&drm);
 	if (ret)
@@ -479,11 +481,12 @@ nouveau_drm_load(struct drm_device *dev, unsigned long flags)
 	nouveau_accel_init(drm);
 	nouveau_fbcon_init(dev);
 
-	if (dev->primary->index < nouveau_device_count) {
-		nouveau_drm_device[dev->primary->index] = dev;
-		printk(KERN_INFO "DRM registered, index %d, count %d, dev %p\n", dev->primary->index, nouveau_device_count, dev);
+	index = __get_device_index(dev);
+	if (index < nouveau_device_count) {
+		nouveau_drm_device[index] = dev;
+		printk(KERN_INFO "DRM registered, index %d, count %d, dev %p\n", index, nouveau_device_count, dev);
 	} else {
-        printk(KERN_INFO "DRM *not* registered, index %d, count %d\n", dev->primary->index, nouveau_device_count);
+		printk(KERN_INFO "DRM *not* registered, index %d, count %d, device index %d\n", index, nouveau_device_count, dev->primary->index);
 	}
 
 	if (nouveau_runtime_pm != 0) {
@@ -1099,16 +1102,34 @@ static int __get_device_count(void)
 	const struct pci_device_id *pid;
 	int i;
 	int count = 0;
-	int while_loop = 0;
 
 	for (i = 0; nouveau_drm_pci_table[i].vendor != 0; i++) {
 		pid = &nouveau_drm_pci_table[i];
 		while ((pdev = pci_get_subsys(pid->vendor, pid->device, pid->subvendor, pid->subdevice, pdev)) != NULL) {
-			while_loop++;
 			if ((pdev->class & pid->class_mask) != pid->class) {
 				continue;
 			}
 			count++; /* physical device count */
+		}
+	}
+
+	return count;
+}
+
+static int __get_device_index(struct drm_device *dev)
+{
+	struct pci_dev *pdev = NULL;
+	const struct pci_device_id *pid;
+	int i;
+	int count = 0;
+
+	for (i = 0; nouveau_drm_pci_table[i].vendor != 0; i++) {
+		pid = &nouveau_drm_pci_table[i];
+		while ((pdev = pci_get_subsys(pid->vendor, pid->device, pid->subvendor, pid->subdevice, pdev)) != NULL) {
+			if (pdev == dev->pdev) {
+				return count;
+			}
+			count++;
 		}
 	}
 
