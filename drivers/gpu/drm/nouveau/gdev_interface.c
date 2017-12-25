@@ -148,7 +148,7 @@ int gdev_drv_chan_free(struct gdev_drv_vspace *drv_vspace, struct gdev_drv_chan 
 }
 EXPORT_SYMBOL(gdev_drv_chan_free);
 
-int gdev_drv_subch_alloc(struct drm_device *drm, void *chan, u32 handle, u16 oclass, void **ctx_obj, struct file *filp)
+int gdev_drv_subch_alloc(struct drm_device *drm, void *chan, u32 handle, u16 oclass, void **ctx_obj)
 {
     struct drm_nouveau_grobj_alloc request = {
         .channel = ((struct nouveau_channel*)chan)->chid,

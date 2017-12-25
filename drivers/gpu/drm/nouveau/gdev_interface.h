@@ -49,7 +49,7 @@ int gdev_drv_vspace_alloc(struct drm_device *drm, uint64_t size, struct gdev_drv
 int gdev_drv_vspace_free(struct gdev_drv_vspace *drv_vspace);
 int gdev_drv_chan_alloc(struct drm_device *drm, struct gdev_drv_vspace *drv_vspace, struct gdev_drv_chan *drv_chan);
 int gdev_drv_chan_free(struct gdev_drv_vspace *drv_vspace, struct gdev_drv_chan *drv_chan);
-int gdev_drv_subch_alloc(struct drm_device *drm, void *chan, u32 handle, u16 oclass, void **ctx_obj, struct file *filp);
+int gdev_drv_subch_alloc(struct drm_device *drm, void *chan, u32 handle, u16 oclass, void **ctx_obj);
 int gdev_drv_subch_free(struct drm_device *drm, void *chan, u32 handle);
 int gdev_drv_bo_alloc(struct drm_device *drm, uint64_t size, uint32_t flags, struct gdev_drv_vspace *drv_vspace, struct gdev_drv_bo *drv_bo);
 int gdev_drv_bo_free(struct gdev_drv_vspace *drv_vspace, struct gdev_drv_bo *drv_bo);
