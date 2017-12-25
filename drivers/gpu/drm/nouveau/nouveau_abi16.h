@@ -9,6 +9,8 @@ int nouveau_abi16_ioctl_setparam(ABI16_IOCTL_ARGS);
 int nouveau_abi16_ioctl_channel_alloc(ABI16_IOCTL_ARGS);
 int nouveau_abi16_ioctl_channel_free(ABI16_IOCTL_ARGS);
 int nouveau_abi16_ioctl_grobj_alloc(ABI16_IOCTL_ARGS);
+int my_nouveau_abi16_ioctl_grobj_alloc(struct drm_device *dev, void *data, struct nouveau_channel* chan);
+int my_nouveau_abi16_ioctl_gpuobj_free(struct drm_device *dev, void *data, struct nouveau_channel* chan);
 int nouveau_abi16_ioctl_notifierobj_alloc(ABI16_IOCTL_ARGS);
 int nouveau_abi16_ioctl_gpuobj_free(ABI16_IOCTL_ARGS);
 

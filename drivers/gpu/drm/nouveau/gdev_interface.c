@@ -1,5 +1,7 @@
 #include <linux/module.h>
 #include <linux/version.h>
+#include <nvif/class.h>
+#include <nvif/object.h>
 /* #include <nvkm/core/engine/graph/nvc0.h> */
 #include <drm/ttm/ttm_placement.h>
 #include <drm/ttm/ttm_bo_api.h>
@@ -108,6 +110,7 @@ int gdev_drv_chan_alloc(struct drm_device *drm, struct gdev_drv_vspace *drv_vspa
     switch (nvdev->info.chipset & 0xf0) {
 	case 0xc0:
 	case 0xe0:
+        case 0xf0:
 	    /* FIFO command queue registers. */
 	    regs = chan->user.map.ptr;
 	    break;
@@ -145,15 +148,16 @@ int gdev_drv_chan_free(struct gdev_drv_vspace *drv_vspace, struct gdev_drv_chan 
 }
 EXPORT_SYMBOL(gdev_drv_chan_free);
 
-int gdev_drv_subch_alloc(struct drm_device *drm, void *chan, u32 handle, u16 oclass, void **ctx_obj)
+int gdev_drv_subch_alloc(struct drm_device *drm, void *chan, u32 handle, u16 oclass, void **ctx_obj, struct file *filp)
 {
     struct drm_nouveau_grobj_alloc request = {
         .channel = ((struct nouveau_channel*)chan)->chid,
         .handle = handle,
         .class = oclass,
     };
+
     *ctx_obj = NULL;
-    return nouveau_abi16_ioctl_grobj_alloc(drm, &request, NULL);
+    return my_nouveau_abi16_ioctl_grobj_alloc(drm, &request, (struct nouveau_channel*)chan);
 }
 EXPORT_SYMBOL(gdev_drv_subch_alloc);
 
@@ -163,7 +167,7 @@ int gdev_drv_subch_free(struct drm_device *drm, void *chan, u32 handle)
         .channel = ((struct nouveau_channel *)chan)->chid,
         .handle = handle,
     };
-    return nouveau_abi16_ioctl_gpuobj_free(drm, &request, NULL);
+    return my_nouveau_abi16_ioctl_gpuobj_free(drm, &request, (struct nouveau_channel*)chan);
 }
 EXPORT_SYMBOL(gdev_drv_subch_free);
 

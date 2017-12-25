@@ -69,6 +69,7 @@ struct nouveau_abi16 *
 nouveau_abi16_get(struct drm_file *file_priv)
 {
 	struct nouveau_cli *cli = nouveau_cli(file_priv);
+
 	mutex_lock(&cli->mutex);
 	if (nouveau_abi16(file_priv))
 		return cli->abi16;
@@ -415,6 +416,80 @@ nouveau_abi16_ioctl_channel_free(ABI16_IOCTL_ARGS)
 	return nouveau_abi16_put(abi16, 0);
 }
 
+
+int
+my_nouveau_abi16_ioctl_grobj_alloc(struct drm_device *dev, void *data, struct nouveau_channel* chan)
+{
+        struct drm_nouveau_grobj_alloc *init = data;
+	struct nvif_sclass *sclass;
+        struct nvif_object* nvobj; 
+	s32 oclass = 0;
+	int ret, i;
+
+
+
+
+	ret = nvif_object_sclass_get(&chan->user, &sclass);
+
+	if ((init->class & 0x00ff) == 0x006e) {
+		/* nvsw: compatibility with older 0x*6e class identifier */
+		for (i = 0; !oclass && i < ret; i++) {
+			switch (sclass[i].oclass) {
+			case NVIF_CLASS_SW_NV04:
+			case NVIF_CLASS_SW_NV10:
+			case NVIF_CLASS_SW_NV50:
+			case NVIF_CLASS_SW_GF100:
+				oclass = sclass[i].oclass;
+				break;
+			default:
+				break;
+			}
+		}
+	} else
+	if ((init->class & 0x00ff) == 0x00b1) {
+		/* msvld: compatibility with incorrect version exposure */
+		for (i = 0; i < ret; i++) {
+			if ((sclass[i].oclass & 0x00ff) == 0x00b1) {
+				oclass = sclass[i].oclass;
+				break;
+			}
+		}
+	} else
+	if ((init->class & 0x00ff) == 0x00b2) { /* mspdec */
+		/* mspdec: compatibility with incorrect version exposure */
+		for (i = 0; i < ret; i++) {
+			if ((sclass[i].oclass & 0x00ff) == 0x00b2) {
+				oclass = sclass[i].oclass;
+				break;
+			}
+		}
+	} else
+	if ((init->class & 0x00ff) == 0x00b3) { /* msppp */
+		/* msppp: compatibility with incorrect version exposure */
+		for (i = 0; i < ret; i++) {
+			if ((sclass[i].oclass & 0x00ff) == 0x00b3) {
+				oclass = sclass[i].oclass;
+				break;
+			}
+		}
+	} else {
+		oclass = init->class;
+	}
+
+	nvif_object_sclass_put(&sclass);
+
+	nvobj =  kzalloc(sizeof(*nvobj), GFP_KERNEL);
+
+
+	ret = nvif_object_init(&chan->user, init->handle, oclass,
+			       NULL, 0, nvobj);
+
+	if (ret)
+          nvif_object_fini(nvobj);
+        return ret;
+}
+
+
 int
 nouveau_abi16_ioctl_grobj_alloc(ABI16_IOCTL_ARGS)
 {
@@ -580,6 +655,19 @@ done:
 	return nouveau_abi16_put(abi16, ret);
 }
 
+
+
+int
+my_nouveau_abi16_ioctl_gpuobj_free(struct drm_device *dev, void *data, struct nouveau_channel* chan)
+{
+	struct drm_nouveau_gpuobj_free *fini = data;
+
+	/* synchronize with the user channel and destroy the gpu object */
+	nouveau_channel_idle(chan);
+
+        return 0;
+
+}
 int
 nouveau_abi16_ioctl_gpuobj_free(ABI16_IOCTL_ARGS)
 {
